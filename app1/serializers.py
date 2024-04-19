@@ -104,18 +104,3 @@ class LoginResponseSerializer(serializers.ModelSerializer):
             "refresh_token",
         ]
 
-
-class UserCreateUpdateSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields = [
-            "username",
-            "email",
-            "first_name",
-            "last_name",
-            "mobile_phone",
-            "date_joined",
-            "status",
-            "role_id",
-        ]
