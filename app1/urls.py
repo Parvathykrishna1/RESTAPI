@@ -7,6 +7,7 @@ urlpatterns = [
     path('userregister/',UserRegister.as_view(),name='userregister'),
     path('userlist/',UserList.as_view(),name='userlist'),
     path('userbyid/<int:pk>/',UserById.as_view(),name='userbyid'),
+    path('users/bulk_delete/', BulkDeleteUsers.as_view(), name='bulk_delete_users'),
     path('refreshtoken/',jwt_views.TokenRefreshView.as_view(),name ='refreshtoken'),
     path('access_token/',jwt_views.TokenObtainPairView.as_view(),name ='access token'),
 ]
