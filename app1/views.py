@@ -10,7 +10,7 @@ from rest_framework import filters, status
 from .models import *
 from .serializers import *
 from rest_framework.views import APIView
-
+from rest_framework.generics import ListAPIView
 
 
 def passwordrule(password):
@@ -41,7 +41,8 @@ def passwordrule(password):
             "Message": "The password must contain at least one digit",
         }
 
-#CreateAPIView
+
+# CreateAPIView
 class UserRegister(generics.CreateAPIView):
 
     def get_serializer_class(self):
@@ -57,10 +58,9 @@ class UserRegister(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save()
 
-#APIView
-# class UserRegister(APIView):
 
-<<<<<<< HEAD
+# APIView
+# class UserRegister(APIView):
 #     def post(self, request, *args, **kwargs):
 #         serializer = UserRegistrationSerializer(data=request.data)
 #         if serializer.is_valid():
@@ -72,6 +72,8 @@ class UserRegister(generics.CreateAPIView):
 #             return Response(response_data, status=status.HTTP_201_CREATED)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+# LOGINVIEW
 class Login(generics.ListAPIView):
     permission_classes = [AllowAny]
     serializer = LoginSerializer
@@ -122,83 +124,17 @@ class Login(generics.ListAPIView):
             return Response(
                 serializer.errors,
             )
-=======
+
     def post(self, request, *args, **kwargs):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             response_data = {
                 "message": "User created successfully",
-                "data": serializer.data
+                "data": serializer.data,
             }
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class UserList(generics.ListAPIView):
-#     search_fields = ["username", "first_name", "last_name", "role_id__name"]
-#     filter_backends = (filters.SearchFilter,)
-
-#     def get_serializer_class(self):
-#         return UserSerializer
-
-#     def get_queryset(self):
-#         queryset = User.objects.only(
-#             "username",
-#             "email",
-#             "first_name",
-#             "last_name",
-#             "mobile_phone",
-#             "date_joined",
-#             "status",
-#             "role_id__role_id",
-#             "role_id__name",
-#             "user_id",
-#         ).select_related("role_id")
-#         queryset = queryset.filter(status=0)
-
-#         return queryset.order_by("-user_id")
-
-#     def get(self, request, *args, **kwargs):
-#         queryset = self.get_queryset()
-#         queryset = self.filter_queryset(queryset)
-#         serializer = self.get_serializer(queryset, many=True)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
-class UserList(APIView):
-
-    def get(self, request, format=None):
-        try:
-            data_obj = User.objects.filter(status=0)
-        except:
-            raise Http404
-        dataarr = []
-        for data_objs in data_obj:
-            dict = {
-                "user_id": data_objs.user_id,
-                "email": data_objs.email,
-                "first_name": data_objs.first_name,
-                "last_name": data_objs.last_name,
-                "mobile_phone": data_objs.mobile_phone,
-                "date_joined": data_objs.date_joined,
-            }
-            dataarr.append(dict)
-        if dataarr == []:
-            return Response(
-                {
-                    "Status": "1",
-                    "Message": "No User Found",
-                }
-            )
-        return Response(
-            {
-                "Status": "0",
-                "data": dataarr,
-            }
-        )
->>>>>>> c48ea745d333e6b7a9b120eaf5c03fdda11e669a
 
 
 # class Login(APIView):
@@ -248,72 +184,72 @@ class UserList(APIView):
 #             )
 
 
-class UserList(generics.ListAPIView):
-    search_fields = ["username", "first_name", "last_name", "role_id__name"]
-    filter_backends = (filters.SearchFilter,)
-
-    def get_serializer_class(self):
-        return UserSerializer
+# USERLIST
+class UserList(ListAPIView):
+    # permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
 
     def get_queryset(self):
-        queryset = User.objects.only(
-            "username",
-            "email",
-            "first_name",
-            "last_name",
-            "mobile_phone",
-            "date_joined",
-            "status",
-            "role_id__role_id",
-            "role_id__name",
-            "user_id",
-        ).select_related("role_id")
-        queryset = queryset.filter(status=0)
+        queryset = super().get_queryset()
+        q = self.request.query_params.get("q")
+        if q:
+            queryset = queryset.filter(username__icontains=q)
+        return queryset
 
-        return queryset.order_by("-user_id")
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
 
-    def get(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        queryset = self.filter_queryset(queryset)
+        # Sorting
+        ordering = self.request.query_params.get("ordering", None)
+        if ordering:
+            queryset = queryset.order_by(ordering)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
 
+# class UserList(generics.ListAPIView):
+#     serializer_class = UserSerializer
+#     search_fields = ["username", "first_name", "last_name", "role_id__name"]
+#     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
 
-# class UserList(APIView):
+#     def get_queryset(self):
+#         queryset = User.objects.only(
+#             "username",
+#             "email",
+#             "first_name",
+#             "last_name",
+#             "mobile_phone",
+#             "date_joined",
+#             "status",
+#             "role_id__role_id",
+#             "role_id__name",
+#             "user_id",
+#         ).select_related("role_id")
+#         queryset = queryset.filter(status=0)
 
-#     def get(self, request, format=None):
-#         try:
-#             data_obj = User.objects.filter(status=0)
-#         except:
-#             raise Http404
-#         dataarr = []
-#         for data_objs in data_obj:
-#             dict = {
-#                 "user_id": data_objs.user_id,
-#                 "email": data_objs.email,
-#                 "first_name": data_objs.first_name,
-#                 "last_name": data_objs.last_name,
-#                 "mobile_phone": data_objs.mobile_phone,
-#                 "date_joined": data_objs.date_joined,
-#             }
-#             dataarr.append(dict)
-#         if dataarr == []:
-#             return Response(
-#                 {
-#                     "Status": "1",
-#                     "Message": "No User Found",
-#                 }
-#             )
-#         return Response(
-#             {
-#                 "Status": "0",
-#                 "data": dataarr,
-#             }
-#         )
+#         # Implementing sorting
+#         ordering = self.request.query_params.get('ordering', None)
+#         if ordering:
+#             queryset = queryset.order_by(ordering)
+
+#         return queryset
+
+#     def get(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         queryset = self.filter_queryset(queryset)
+#         serializer = self.get_serializer(queryset, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserById(APIView):
+    # permission_classes = [IsAuthenticated]
     def get_object(self, pk):
         try:
             return User.objects.get(pk=pk, status=0)
@@ -330,15 +266,29 @@ class UserById(APIView):
         serializer = UserCreateUpdateSerializer(instance, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"Status": "0", "Message": "Successfully Updated!", "Body": serializer.data})
+            return Response(
+                {
+                    "Status": "0",
+                    "Message": "Successfully Updated!",
+                    "Body": serializer.data,
+                }
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, pk, format=None):
         instance = self.get_object(pk)
-        serializer = UserCreateUpdateSerializer(instance, data=request.data, partial=True)
+        serializer = UserCreateUpdateSerializer(
+            instance, data=request.data, partial=True
+        )
         if serializer.is_valid():
             serializer.save()
-            return Response({"Status": "0", "Message": "Successfully Updated!", "Body": serializer.data})
+            return Response(
+                {
+                    "Status": "0",
+                    "Message": "Successfully Updated!",
+                    "Body": serializer.data,
+                }
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
@@ -351,13 +301,17 @@ class UserById(APIView):
 
 
 class BulkDeleteUsers(APIView):
+    # permission_classes = [IsAuthenticated]
     def post(self, request, format=None):
         try:
-            user_ids = request.data.get('user_ids', [])
+            user_ids = request.data.get("user_ids", [])
             if not isinstance(user_ids, list):
                 return Response({"Status": "1", "Message": "Invalid input data format"})
             deleted_count = User.objects.filter(pk__in=user_ids).delete()[0]
-            return Response({"Status": "0", "Message": f"{deleted_count} users deleted"})
+            return Response(
+                {"Status": "0", "Message": f"{deleted_count} users deleted"}
+            )
         except Exception as e:
-            return Response({"Status": "1", "Message": "Bulk deletion failed: " + str(e)})
-
+            return Response(
+                {"Status": "1", "Message": "Bulk deletion failed: " + str(e)}
+            )
